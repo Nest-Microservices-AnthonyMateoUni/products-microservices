@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsNumber, IsString, Min } from 'class-validator';
+import { number } from 'joi';
 
 export class CreateProductDto {
   @IsString()
@@ -9,6 +10,6 @@ export class CreateProductDto {
     maxDecimalPlaces: 4,
   })
   @Min(0)
-  @Type(() => Number)
+  @Type(() => number)
   public price: number;
 }
