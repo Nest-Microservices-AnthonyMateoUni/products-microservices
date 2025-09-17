@@ -1,9 +1,10 @@
 import { HttpStatus, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { PrismaClient } from 'generated/prisma';
-import { PaginationDto } from 'src/common';
 import { RpcException } from '@nestjs/microservices';
+import { PrismaClient } from '@prisma/client';
+
+import { PaginationDto } from 'src/common';
 
 @Injectable()
 export class ProductsService extends PrismaClient implements OnModuleInit {
@@ -11,7 +12,7 @@ export class ProductsService extends PrismaClient implements OnModuleInit {
 
   onModuleInit() {
     this.$connect();
-    this.logger.log('Database Connected');
+    this.logger.log('Database connected');
   }
 
   create(createProductDto: CreateProductDto) {
@@ -21,51 +22,52 @@ export class ProductsService extends PrismaClient implements OnModuleInit {
   }
 
   async findAll(paginationDto: PaginationDto) {
-    const { page = 0, limit = 0 } = paginationDto;
+    let { page, limit } = paginationDto;
 
-    const totalpage = await this.product.count({ where: { avaialable: true } });
-    const lastPage = Math.ceil(totalpage / limit);
+    // Asigna valores por defecto si son undefined
+    page = page ?? 1;
+    limit = limit ?? 10;
+
+    const totalPages = await this.product.count({ where: { available: true } });
+    const lastPage = Math.ceil(totalPages / limit);
 
     return {
       data: await this.product.findMany({
-        skip: (page - 1) * limit, // Skips previous pages
-        take: limit, // Limits the number of records on this
-        where: {
-          avaialable: true,
-        },
+        skip: (page - 1) * limit,
+        take: limit,
+        where: { available: true },
       }),
       meta: {
-        total: totalpage,
-        page: page,
-        lastPage: lastPage,
+        total: totalPages,
+        page,
+        lastPage,
       },
     };
   }
 
   async findOne(id: number) {
     const product = await this.product.findFirst({
-      where: { id, avaialable: true },
+      where: { id, available: true },
     });
 
     if (!product) {
       throw new RpcException({
-        message: `Porduct with id ${id} Not Found`,
+        message: `Product with id #${id} not found`,
         status: HttpStatus.BAD_REQUEST,
       });
     }
+
     return product;
   }
 
   async update(id: number, updateProductDto: UpdateProductDto) {
-    // return `This action returns a #${id} product`;
-
     const { id: __, ...data } = updateProductDto;
 
     await this.findOne(id);
 
     return this.product.update({
       where: { id },
-      data: updateProductDto,
+      data: data,
     });
   }
 
@@ -73,13 +75,13 @@ export class ProductsService extends PrismaClient implements OnModuleInit {
     await this.findOne(id);
 
     // return this.product.delete({
-    //   where: { id },
+    //   where: { id }
     // });
 
     const product = await this.product.update({
       where: { id },
       data: {
-        avaialable: false,
+        available: false,
       },
     });
 
